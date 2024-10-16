@@ -1,0 +1,382 @@
+/* Base styles */
+body {
+  background-image: linear-gradient(rgba(0, 0, 0, 0.6),
+      rgba(0, 0, 0, 0.6)), url('../img/Latar_Belakang.png');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  color: #e0e0e0;
+}
+
+#textInput {
+  font-size: 32px;
+  position: relative;
+  white-space: pre;
+  padding: 20px 10px 10px;
+  overflow: hidden;
+  height: 80px;
+  display: inline-block;
+  width: 100%;
+  min-width: 300px;
+  min-height: 80px;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+#textInput.active {
+  box-shadow: 0 0 0 0.15rem rgba(255, 255, 0, 0.3);
+}
+
+#textInput.active:before {
+  content: 'CASE SENSITIVE';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  text-transform: uppercase;
+  font-size: 10px;
+  padding: 2px 10px;
+}
+
+#textInput.active:after {
+  content: '';
+  position: absolute;
+  width: 15px;
+  height: 3px;
+  background: #fff;
+  left: 12px;
+  top: 60px;
+  animation: flash 0.3s infinite;
+}
+
+/* Typography */
+.lead {
+  font-size: 1.2rem;
+  font-weight: 300;
+  color: #fff;
+}
+
+.mono {
+  font-family: "Cutive Mono", "Courier New", monospace;
+}
+
+.x-small {
+  font-size: 75%;
+}
+
+.stats {
+  font-size: 2.5rem;
+  font-weight: 300;
+  line-height: 1.1;
+  color: #ffd700;
+}
+
+/* Output area */
+#textOutput {
+  background: rgba(34, 34, 34, 0.8);
+  color: #fff;
+  padding: 1rem;
+  max-width: 600px;
+  margin: 2em auto;
+  white-space: pre-wrap;
+  overflow: hidden;
+  min-height: 100px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Utility classes */
+.list-item {
+  color: #ffffff !important;
+  /* White color */
+}
+
+.text-danger {
+  color: #ffd700 !important;
+}
+
+/* Animations */
+@keyframes flash {
+  0%, 100% {
+    background: #fff;
+  }
+
+  50% {
+    background: #FF9999;
+  }
+}
+
+/* Modal styles */
+.modal {
+  background-color: rgba(0, 0, 0, 0.6);
+  animation: modalopen 0.3s;
+}
+
+@keyframes modalopen {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-content {
+  background-color: #001a1a;
+  border: 2px solid #00ff00;
+  color: #00ff00;
+  padding: 20px;
+  border-radius: 10px;
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: center; /* Center the title */
+  align-items: center;
+  border-bottom: 1px solid #fff;
+  padding-bottom: 10px;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+/* Hide the close button */
+.modal-header .close,
+.modal-header button.close,
+.modal-header .modal-close-btn {
+  display: none !important;
+}
+
+.modal-body {
+  margin-top: 20px;
+}
+
+.modal-body p {
+  margin: 10px 0;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.modal-footer button {
+  background-color: #00ff00;
+  color: #001a1a;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.modal-footer button:hover {
+  background-color: #00cc00;
+}
+
+.modal-footer .btn-danger {
+  background-color: #ff0000;
+  color: #fff;
+}
+
+.modal-footer .btn-danger:hover {
+  background-color: #cc0000;
+}
+
+.modal-icon img {
+  max-width: 100px;
+  margin-bottom: 20px;
+}
+
+.media-body {
+  text-align: center;
+}
+
+/* Controls */
+.sound-control {
+  position: fixed;
+  z-index: 999;
+  left: 20px;
+  bottom: 20px;
+  width: 35px;
+  height: 35px;
+  cursor: pointer;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+}
+
+.sound-control>svg {
+  height: 35px;
+  width: 35px;
+  fill: #fff;
+}
+
+.control>button {
+  outline: none;
+  padding: 0;
+  margin: 1rem 1rem 2rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  width: 35px;
+  height: 35px;
+  cursor: pointer;
+  border-radius: 50%;
+}
+
+.control>button>svg {
+  height: 100%;
+  width: 100%;
+  transition: all 0.3s;
+  fill: #fff;
+}
+
+.control>button.active svg {
+  fill: #ffd700;
+  outline: 0;
+  box-shadow: 0 0 0 0.2rem rgba(255, 255, 255, 0.2);
+}
+
+/* Meter gauge */
+.meter-gauge {
+  display: flex;
+}
+
+.meter-gauge>span {
+  text-align: center;
+  font-size: 12px;
+  min-height: 25px;
+  padding: 5px;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  margin: 0 2px;
+}
+
+/* Miscellaneous */
+.hr-x {
+  width: 40px;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.media-object {
+  max-height: 70px;
+  filter: brightness(0.8) contrast(1.2);
+}
+
+/* Styles for input and select elements */
+.form-control, #difficultySelect {
+  background-color: rgba(34, 34, 34, 0.8);
+  /* Default background color */
+  color: #ffd700;
+  /* Gold color */
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 7px;
+  font-size: 1rem;
+  border-radius: 5px;
+  margin-bottom: 1rem;
+}
+
+.form-control::placeholder {
+  color: #ffd700;
+  /* Gold color */
+}
+
+.form-control:focus {
+  background-color: rgba(128, 128, 128, 0.8);
+  /* Gray background color on focus */
+  color: #ffd700;
+  /* Gold color */
+  outline: none;
+  /* Remove default outline */
+}
+
+.form-label {
+  font-size: 1.5rem;
+  color: #ffd700;
+  /* Gold color */
+  margin-bottom: 1rem;
+}
+
+#difficultySelect {
+  width: 50%;
+  /* Adjust width as needed */
+  appearance: none;
+  background-color: rgba(34, 34, 34, 0.8);
+  /* Match background color */
+  color: #ffd700;
+  /* Gold color */
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 7px;
+  font-size: 1rem;
+  border-radius: 5px;
+  margin-bottom: 1rem;
+  background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><path fill="%23ffd700" d="M2 0L0 2h4zm0 5L0 3h4z"/></svg>');
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 8px 10px;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+#difficultySelect option {
+  background-color: rgba(34, 34, 34, 0.8);
+  /* Match dropdown background color */
+  color: #ffd700;
+  /* Gold color */
+}
+
+/* Keyframes for shimmering wave effect */
+@keyframes colorLoopRightToLeft {
+  0% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Apply the right-to-left looping color effect to the specific text */
+.shimmer-text {
+  font-size: 1.5rem;
+  background: linear-gradient(to left,
+      #006400,
+      #ffd700,
+      #006400,
+      #ffd700,
+      #006400);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: colorLoopRightToLeft 2s linear infinite;
+}
+
+/* Ensure the text color for the buttons is white */
+.btn-control .x-small.text-muted {
+  color: #ffd700 !important;
+  /* White color */
+}
+
+.shimmer-wpm {
+  background: linear-gradient(to left,
+      #006400,
+      #ffd700,
+      #006400,
+      #ffd700,
+      #006400);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: colorLoopRightToLeft 2s linear infinite;
+}
