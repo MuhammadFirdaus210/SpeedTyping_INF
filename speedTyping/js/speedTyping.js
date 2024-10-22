@@ -14,7 +14,7 @@ const _errors = select('#errors');
 const _accuracy = select('#accuracy');
 const _totalWords = select('#totalWords');
 const _writtenWords = select('#writtenWords');
-const _lastWPM = select('#lastWPM'); // Updated to match the new ID
+const _lastWPM = select('#lastWPM');
 // Modal
 const modal = select('#ModalCenter');
 const modalBody = select('.modal-body');
@@ -30,21 +30,32 @@ const keyClick = select('#keyClick');
 const keyBeep = select('#keyBeep');
 
 let sound = true;
-let currentLanguage = 'en';
+let currentLanguage = '';
 let allQuotes = [];
 
 // Function to change language
 function changeLanguage(lang) {
+    if (lang === '') {
+        // Reset to default state when "Select..." is chosen
+        currentLanguage = '';
+        allQuotes = [];
+        input.textContent = '';
+        output.textContent = '';
+        return;
+    }
     currentLanguage = lang;
     loadQuotes();
 }
 
 // Function to load quotes
 function loadQuotes() {
+    if (!currentLanguage) return; // Don't load quotes if no language is selected
+
     fetch('js/quotes.json')
         .then(response => response.json())
         .then(data => {
             allQuotes = data[currentLanguage];
+            console.log(`Quotes loaded for language: ${currentLanguage}`, allQuotes);
         })
         .catch(error => console.error('Error:', error));
 }
@@ -54,30 +65,37 @@ document.getElementById('languageSelect').addEventListener('change', (e) => {
     changeLanguage(e.target.value);
 });
 
-// Initial load
-loadQuotes();
+// Add event listener for difficulty change
+document.getElementById('difficultySelect').addEventListener('change', (e) => {
+    if (e.target.value === '') {
+        // Reset to default state when "Select..." is chosen
+        input.textContent = '';
+        output.textContent = '';
+    }
+});
 
 // Function to return random key from an array
 const random = array => array[Math.floor(Math.random() * array.length)];
 
 // speedTyping Class
-class speedTyping {
+class SpeedTyping {
     constructor() {
-        this.index = 0;        // Main index
-        this.words = 0;        // Completed words index
-        this.errorIndex = 0;        // Errors index
-        this.correctIndex = 0;        // Correct index
-        this.accuracyIndex = 0;        // Accuracy counter
-        this.cpm = 0;        // CPM counter
-        this.wpm = 0;        // WPM cpm / 5 
-        this.interval = null;     // interval counter
-        this.duration = 60;       // Test duration time (60 seconds)
-        this.typing = false;    // To check if we are typing
-        this.quote = '';       // Current quote
-        this.author = '';       // Current author
+        this.index = 0;
+        this.words = 0;
+        this.errorIndex = 0;
+        this.correctIndex = 0;
+        this.accuracyIndex = 0;
+        this.cpm = 0;
+        this.wpm = 0;
+        this.interval = null;
+        this.duration = 60;
+        this.typing = false;
+        this.quote = '';
+        this.author = '';
         this.remainingTime = this.duration;
-        this.lastWPM = parseInt(localStorage.getItem('WPM')) || 0; // Last WPM
-        this.startTime = null; // Start time of the test
+        this.lastWPM = parseInt(localStorage.getItem('WPM')) || 0;
+        this.startTime = null;
+        this.currentWordStartIndex = 0; // Track the start index of the current word
     }
 
     timer() {
@@ -98,120 +116,146 @@ class speedTyping {
     }
 
     start() {
+        const languageSelect = document.getElementById('languageSelect');
         const difficultySelect = document.getElementById('difficultySelect');
-        const selectedLevel = difficultySelect.value;
 
-        // Filter out quotes based on the selected difficulty level
-        const filteredQuotes = allQuotes.filter(item => item.level === selectedLevel);
+        if (languageSelect.value === '' || difficultySelect.value === '') {
+            alert('Please select both a language and a difficulty level.');
+            return;
+        }
+
+        const selectedLevel = difficultySelect.value;
+        console.log(`Selected level: ${selectedLevel}`);
+
+        const filteredQuotes = allQuotes.filter(item => item.level.toLowerCase() === selectedLevel.toLowerCase());
+        console.log(`Filtered quotes:`, filteredQuotes);
+
         if (filteredQuotes.length === 0) {
             alert('No quotes available for the selected difficulty level.');
             return;
         }
 
-        // Get Authors / Quotes only
-        const getQuote = filteredQuotes.map(item => item.quote);
-        const getAuthor = filteredQuotes.map(item => item.author);
+        this.author = this.getRandomItem(filteredQuotes.map(item => item.author));
+        this.quote = this.getRandomItem(filteredQuotes.map(item => item.quote));
 
-        // Get random author quotes
-        this.author = random(getAuthor);
-        // Get random quotes
-        this.quote = random(getQuote);
-
-        // Count how many words in a single quote by splitting the array by whitespaces
-        const quoteWords = this.quote.split(' ').filter(i => i).length;
-        // Display total words counter
+        const quoteWords = this.quote.split(' ').filter(Boolean).length;
         _totalWords.textContent = quoteWords;
 
-        // Set the timer
         this.timer();
-        // Set active class to Play btn
         btnPlay.classList.add('active');
-        // Enable the typing area
         input.setAttribute('tabindex', '0');
         input.removeAttribute('disabled');
-        // Add set focus and Active class
         input.focus();
         input.classList.add('active');
 
-        // Check if we start typing
         if (!this.typing) {
             this.typing = true;
-
-            // Display the quotes in the input div
             input.textContent = this.quote;
-
-            // Start the event listener
             input.addEventListener('keypress', this.handleKeyPress.bind(this));
+            input.addEventListener('keydown', this.handleKeyDown.bind(this)); // Add keydown event listener for backspace
         }
     }
 
     handleKeyPress(event) {
-        // Prevent the default action
         event.preventDefault();
-        // Just in case
-        event = event || window.event;
-        // Get the pressed key code
         const charCode = event.which || event.keyCode;
-        // Read it as a normal key
         const charTyped = String.fromCharCode(charCode);
 
-        // Compare the pressed key to the quote letter
-        if (charTyped === this.quote.charAt(this.index)) {
-            // Detect the spaces by white space " "  or key code is (32) - Double check maybe not necessarily
-            if (charTyped === " " && charCode === 32) {
-                this.words++;
-                // Display the written words
-                _writtenWords.textContent = this.words;
+        if (charCode === 32) { // Spacebar pressed
+            if (this.index > this.currentWordStartIndex) { // Ensure at least one character is typed
+                this.completeCurrentWord();
+                this.moveToNextWord();
             }
-            // Increment the keys index
-            this.index++;
-
-            // Hold current quote
-            const currentQuote = this.quote.substring(this.index, this.quote.length);
-
-            // Update the input div value when typing
-            input.textContent = currentQuote;
-            output.innerHTML += charTyped;
-            // Increment the correct keys
-            this.correctIndex++;
-            // If index = the quote length, that means the text is done, call the finish() method
-            if (this.index === this.quote.length) {
-                this.words++; // Increment words for the last word
-                _writtenWords.textContent = this.words; // Update written words
-                this.stop();
-                this.finish();
-                return;
-            }
-            // Play typing sound if enabled
-            if (sound) {
-                keyClick.currentTime = 0;
-                keyClick.play();
-            }
-        } else {
-            // Add the errors into the output div
-            output.innerHTML += `<span class="text-danger">${charTyped}</span>`;
-            // Increment the wrong keys counter
-            this.errorIndex++;
-            // Add accuracy error counter to the dom
-            _errors.textContent = this.errorIndex;
-            // Play typing sound if enabled
-            if (sound) {
-                keyBeep.currentTime = 0;
-                keyBeep.play();
-            }
+            return;
         }
-        // CPM counter
-        this.cpm = Math.floor((this.correctIndex + this.errorIndex) / (this.duration - this.remainingTime) * 60);
-        // Add to the dom
+
+        if (charTyped === this.quote.charAt(this.index)) {
+            this.index++;
+            this.correctIndex++;
+            output.innerHTML += charTyped;
+        } else {
+            output.innerHTML += `<span class="text-danger">${charTyped}</span>`;
+            this.errorIndex++;
+            _errors.textContent = this.errorIndex; // Update errors count
+        }
+
+        this.updateInput();
+        this.updateStats();
+
+        if (sound) {
+            this.playSound(charTyped === this.quote.charAt(this.index - 1) ? keyClick : keyBeep);
+        }
+
+        if (this.index === this.quote.length) {
+            this.words++;
+            _writtenWords.textContent = this.words;
+            this.stop();
+            this.finish();
+        }
+    }
+
+    handleKeyDown(event) {
+        if (event.key === 'Backspace' && this.index > this.currentWordStartIndex) {
+            event.preventDefault();
+            this.index--;
+            const lastChar = output.innerHTML.slice(-1);
+            output.innerHTML = output.innerHTML.slice(0, -1);
+            if (lastChar.includes('text-danger')) {
+                this.errorIndex--;
+                _errors.textContent = this.errorIndex; // Update errors count
+            } else {
+                this.correctIndex--;
+            }
+            this.updateInput();
+            this.updateStats();
+        }
+    }
+
+    completeCurrentWord() {
+        const currentWordEnd = this.quote.indexOf(' ', this.index);
+        const currentWord = this.quote.substring(this.index, currentWordEnd === -1 ? this.quote.length : currentWordEnd);
+        const remainingChars = currentWord.length;
+
+        for (let i = 0; i < remainingChars; i++) {
+            output.innerHTML += `<span class="text-danger">${this.quote.charAt(this.index)}</span>`;
+            this.errorIndex++;
+            this.index++;
+        }
+        _errors.textContent = this.errorIndex; // Update errors count
+    }
+
+    moveToNextWord() {
+        const nextSpaceIndex = this.quote.indexOf(' ', this.index);
+        if (nextSpaceIndex !== -1) {
+            this.index = nextSpaceIndex + 1;
+            output.innerHTML += ' '; // Add space to the output
+        } else {
+            this.index = this.quote.length;
+        }
+        this.words++;
+        _writtenWords.textContent = this.words;
+        this.currentWordStartIndex = this.index; // Update the start index of the next word
+        this.updateInput();
+    }
+
+    updateInput() {
+        const currentQuote = this.quote.substring(this.index);
+        input.textContent = currentQuote;
+    }
+
+    updateStats() {
+        const elapsedTime = (Date.now() - this.startTime) / 60000;
+
+        this.cpm = Math.floor((this.correctIndex + this.errorIndex) / elapsedTime);
         _cpm.textContent = this.cpm;
-        // WPM: (correct chars / total time * 60 / 5)
-        this.wpm = Math.round(this.cpm / 5);
+
+        this.wpm = Math.round((this.correctIndex / 5) / elapsedTime);
         _wpm.textContent = this.wpm;
-        // Accuracy: (Correct chars * 100 / total index)
+
         this.accuracyIndex = Math.round((this.correctIndex * 100) / (this.correctIndex + this.errorIndex));
-        // Add accuracy to the dom. We need to check it because division by 0 gives us special values (infinity, NaN)
-        if (this.accuracyIndex > 0 && Number.isInteger(this.accuracyIndex)) 
+        if (this.accuracyIndex > 0 && Number.isFinite(this.accuracyIndex)) {
             _accuracy.innerHTML = `${this.accuracyIndex}<span class="small">%</span>`;
+        }
     }
 
     stop() {
@@ -223,82 +267,64 @@ class speedTyping {
         input.setAttribute('disabled', 'true');
         btnRefresh.classList.add('active');
         inputFull.classList.remove('d-none');
-        inputFull.innerHTML = `&#8220;${this.quote}&#8221; <span class="d-block small text-muted text-right pr-3">&ndash; ${this.author}</span></div>`;
+        inputFull.innerHTML = `&#8220;${this.quote}&#8221; <span class="d-block small text-muted text-right pr-3">&ndash; ${this.author}</span>`;
 
-        // Calculate the time taken
         const timeTaken = this.duration - this.remainingTime;
-        
-        // Add timer information to the output
-        output.innerHTML += `<br><br><strong>Time taken:</strong> ${timeTaken} seconds`;
-        output.innerHTML += `<br><strong>Remaining Time:</strong> ${this.remainingTime} seconds`;
+        const totalWordsTyped = this.words;
+        const remainingWords = Math.max(0, this.quote.split(' ').filter(Boolean).length - totalWordsTyped);
 
-        // Calculate total words typed and remaining words
-        const totalWordsTyped = this.words; // No need to add 1 here
-        const remainingWords = Math.max(0, this.quote.split(' ').filter(i => i).length - totalWordsTyped);
-
-        // Add words information to the output
-        output.innerHTML += `<br><strong>Total Words Typed:</strong> ${totalWordsTyped}`;
-        output.innerHTML += `<br><strong>Remaining Words:</strong> ${remainingWords}`;
+        output.innerHTML += `
+            <br><br><strong>Time taken:</strong> ${timeTaken} seconds
+            <br><strong>Remaining Time:</strong> ${this.remainingTime} seconds
+            <br><strong>Total Words Typed:</strong> ${totalWordsTyped}
+            <br><strong>Remaining Words:</strong> ${remainingWords}
+        `;
     }
 
     finish() {
-        // Show the modal
         modal.style.display = 'block';
-        const wpm = this.wpm;
+        const message = `Your typing speed is <strong>${this.wpm}</strong> WPM which equals <strong>${this.cpm}</strong> CPM. You've made <strong>${this.errorIndex}</strong> mistakes with <strong>${this.accuracyIndex}%</strong> total accuracy.`;
         const timeTaken = this.duration - this.remainingTime;
-        let result = '';
-        const message = `Your typing speed is <strong>${wpm}</strong> WPM which equals <strong>${this.cpm}</strong> CPM. You've made <strong>${this.errorIndex}</strong> mistakes with <strong>${this.accuracyIndex}%</strong> total accuracy.`;
 
+        let result = this.getResultMessage(message);
+
+        result += this.getAdditionalInfo(timeTaken);
+
+        modalBody.innerHTML = result;
+        this.setupModalListeners();
+        this.updateLastWPM();
+    }
+
+    getResultMessage(message) {
         if (this.remainingTime <= 0) {
-            result = `
-                <div class="modal-icon my-3"><img src="img/time-up.svg" class="media-object"></div>
-                <div class="media-body p-2">
-                    <h4 class="media-heading">Time's Up!</h4>
-                    <p class="lead pt-2">You ran out of time. ${message}</p>
-                </div>`;
-        } else if (wpm > 5 && wpm < 20) {
-            result = `
-                <div class="modal-icon my-3"><img src="img/sleeping.svg" class="media-object"></div>
-                <div class="media-body p-2">
-                    <h4 class="media-heading">Sheeessh!</h4>
-                    <p class="lead pt-2">${message} You should do more practice!</p>
-                </div>`;
-        } else if (wpm > 20 && wpm < 40) {
-            result = `
-                <div class="modal-icon my-3"><img src="img/thinking.svg" class="media-object"></div>
-                <div class="media-body p-2">
-                    <h4 class="media-heading">About Average!</h4>
-                    <p class="lead pt-2">${message} You can do better!</p>
-                </div>`;
-        } else if (wpm > 40 && wpm < 60) {
-            result = `
-                <div class="modal-icon my-3"><img src="img/surprised.svg" class="media-object"></div>
-                <div class="media-body p-2">
-                    <h4 class="media-heading">Great Job!</h4>
-                    <p class="lead pt-2">${message} You're doing great!</p>
-                </div>`;
-        } else if (wpm > 60) {
-            result = `
-                <div class="modal-icon my-3"><img src="img/shocked.svg" class="media-object"></div>
-                <div class="media-body p-2">
-                    <h4 class="media-heading">Insane!</h4>
-                    <p class="lead pt-2">${message} You're are Awesome!</p>
-                </div>`;
+            return this.getMessageTemplate("Time's Up!", "timeout.jpg", `You ran out of time. ${message}`);
+        } else if (this.wpm > 5 && this.wpm < 20) {
+            return this.getMessageTemplate("Sheeessh!", "sleeping.svg", `${message} You should do more practice!`);
+        } else if (this.wpm >= 20 && this.wpm < 40) {
+            return this.getMessageTemplate("About Average!", "thinking.svg", `${message} You can do better!`);
+        } else if (this.wpm >= 40 && this.wpm < 60) {
+            return this.getMessageTemplate("Great Job!", "surprised.svg", `${message} You're doing great!`);
+        } else if (this.wpm >= 60) {
+            return this.getMessageTemplate("Insane!", "shocked.svg", `${message} You're are Awesome!`);
         } else {
-            result = `
-                <div class="modal-icon my-3"><img src="img/smart.svg" class="media-object"></div>
-                <div class="media-body p-2">
-                    <h4 class="media-heading">Hmmm!</h4>
-                    <p class="lead pt-2">Please stop playing around and start typing!</p>
-                </div>`;
+            return this.getMessageTemplate("Hmmm!", "smart.svg", "Please stop playing around and start typing!");
         }
+    }
 
-        // Calculate total words typed and remaining words
-        const totalWordsTyped = this.words; // No need to add 1 here
-        const remainingWords = Math.max(0, this.quote.split(' ').filter(i => i).length - totalWordsTyped);
+    getMessageTemplate(heading, imageSrc, content) {
+        return `
+            <div class="modal-icon my-3"><img src="img/${imageSrc}" class="media-object"></div>
+            <div class="media-body p-2">
+                <h4 class="media-heading">${heading}</h4>
+                <p class="lead pt-2">${content}</p>
+            </div>`;
+    }
 
-        // Add additional information
-        result += `
+    getAdditionalInfo(timeTaken) {
+        const totalWordsTyped = this.words;
+        const remainingWords = Math.max(0, this.quote.split(' ').filter(Boolean).length - totalWordsTyped);
+
+        return `
             <div class="mt-3">
                 <p><strong>Total Words:</strong> ${_totalWords.textContent}</p>
                 <p><strong>Written Words:</strong> ${totalWordsTyped}</p>
@@ -309,40 +335,47 @@ class speedTyping {
                 <p><strong>CPM:</strong> ${this.cpm}</p>
                 <p><strong>WPM:</strong> ${this.wpm}</p>
             </div>`;
+    }
 
-        // Update the DOM
-        modalBody.innerHTML = result;
-        // Target all modal close buttons
+    setupModalListeners() {
         modalClose.forEach(btn => btn.addEventListener('click', () => modal.style.display = 'none'));
-        // Also close the modal when user clicks outside
         window.addEventListener('click', e => e.target === modal ? modal.style.display = 'none' : '');
-        // Repeat the test btn
         modalReload.addEventListener('click', () => {
-            this.lastWPM = this.wpm; // Update Last WPM before reloading
-            localStorage.setItem('WPM', this.wpm);
+            this.updateLastWPM();
             location.reload();
         });
+    }
 
-        // Update Last WPM in the DOM
+    updateLastWPM() {
+        this.lastWPM = this.wpm;
+        localStorage.setItem('WPM', this.wpm);
         _lastWPM.textContent = this.wpm;
+    }
+
+    getRandomItem(array) {
+        return array[Math.floor(Math.random() * array.length)];
+    }
+
+    playSound(audioElement) {
+        audioElement.currentTime = 0;
+        audioElement.play();
     }
 }
 
 // Init the class
-const typingTest = new speedTyping();
+const typingTest = new SpeedTyping();
 
-// Start the test when Start btn clicked
+// Event Listeners
 btnPlay.addEventListener('click', () => typingTest.start());
-// Reload the page when Refresh btn is clicked
 btnRefresh.addEventListener('click', () => {
-    localStorage.setItem('WPM', 0); // Reset Last WPM to 0
+    localStorage.setItem('WPM', 0);
     location.reload();
 });
 
 // Display the saved Last WPM on page load
 _lastWPM.textContent = typingTest.lastWPM;
 
-// Add event listeners for sound control
+// Sound control
 soundOn.addEventListener('click', () => {
     sound = false;
     soundOn.classList.add('d-none');
@@ -354,3 +387,12 @@ soundOff.addEventListener('click', () => {
     soundOff.classList.add('d-none');
     soundOn.classList.remove('d-none');
 });
+
+// Function to reset dropdowns on page load
+function resetDropdowns() {
+    document.getElementById('languageSelect').value = '';
+    document.getElementById('difficultySelect').value = '';
+}
+
+// Call resetDropdowns when the page loads
+window.addEventListener('load', resetDropdowns);
